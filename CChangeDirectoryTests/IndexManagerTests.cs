@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.IO;
+using FluentAssertions;
 
 namespace CChangeDirectory.Tests
 {
@@ -34,6 +35,26 @@ namespace CChangeDirectory.Tests
             }.ToList();
             testDirs.ForEach(x => Directory.CreateDirectory(x));
 
+
+            // get expected result:
+            var keys = new HashSet<string>();
+            foreach (var dir in testDirs)
+            {
+                var segments = dir.Split('.');
+                foreach (var segment in segments)
+                {
+                    if (segment.Contains('.'))
+                    {
+                        var subsegments = segment.Split('.');
+                        foreach (var subsegment in subsegments)
+                        {
+                            keys.Add(subsegment);
+                        }
+                        keys.Add(segment);
+                    }
+                }
+            }
+
             Directory.SetCurrentDirectory(testDirs[0]);
 
             var indexManager = new IndexManager();
@@ -47,10 +68,19 @@ namespace CChangeDirectory.Tests
             Assert.IsFalse(lookup.Where(x => x.Count() != 1).Any());
 
             var cow = lookup["cow"].First().Value.ToHashSet();
-            var expected = new HashSet<string> { @"duck\cow.green", @"duck\cow.blue", @"duck\cow.yellow", @"pig\cow\frog" };
+            var expected1 = new HashSet<string> { @"duck\cow.green", @"duck\cow.blue", @"duck\cow.yellow" };
+            cow.Should().Contain(expected1);
 
-            Assert.IsTrue(cow.SetEquals(expected));
+            var duck = lookup["duck"].First().Value.ToHashSet();
+            duck.Should().Contain(new HashSet<string> { "duck" });
 
+            var frog = lookup["frog"].First().Value.ToHashSet();
+            frog.Should().Contain(new HashSet<string> { @"pig\cow\frog" });
+
+            var sally = lookup["sally"].First().Value.ToHashSet();
+            var sheila = lookup["Sheila"].First().Value.ToHashSet();
+            var bob = lookup["bob"].First().Value.ToHashSet();
+            var harry = lookup["harry"].First().Value.ToHashSet();
         }
     }
 }

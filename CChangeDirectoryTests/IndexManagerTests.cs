@@ -58,7 +58,7 @@ namespace CChangeDirectory.Tests
             Directory.SetCurrentDirectory(testDirs[0]);
 
             var indexManager = new IndexManager();
-            indexManager.Create();
+//            indexManager.Create();
             var indexDir = Path.Combine(dir1, ".ccd");
             Assert.IsTrue(Directory.Exists(indexDir), "index dir does not exist");
             Assert.IsTrue(File.Exists(Path.Combine(indexDir, "index")), "index file does not exists");
@@ -81,6 +81,11 @@ namespace CChangeDirectory.Tests
             var sheila = lookup["Sheila"].First().Value.ToHashSet();
             var bob = lookup["bob"].First().Value.ToHashSet();
             var harry = lookup["harry"].First().Value.ToHashSet();
+
+            sally.Should().Contain("Sally/Sheila/Bob/Harry");
+            sheila.Should().Contain("Sally/Sheila/Bob/Harry");
+            bob.Should().Contain("Sally/Sheila/Bob/Harry");
+            harry.Should().Contain("Sally/Sheila/Bob/Harry");
         }
     }
 }

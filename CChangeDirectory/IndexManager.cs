@@ -5,6 +5,7 @@ using System.Linq;
 
 namespace CChangeDirectory
 {
+
     public class IndexManager
     {
         const string CcdDirectory = ".ccd";
@@ -15,7 +16,7 @@ namespace CChangeDirectory
 
         public void Create()
         {
-            var gitRootDir = GetGitDir();
+            var gitRootDir = GitWorktreeInfo.GetGitDir(Directory.GetCurrentDirectory());
             if (string.IsNullOrEmpty(gitRootDir))
             {
                 throw new DirectoryNotFoundException($"Cannot find a directory containing a .git directory or file.");
@@ -91,22 +92,6 @@ namespace CChangeDirectory
         }
 
 
-        private string GetGitDir()
-        {
-            var dir = Directory.GetCurrentDirectory();
-            var dotGitPath = Path.Combine(dir, ".git");
-            while (!File.Exists(dotGitPath) && !Directory.Exists(dotGitPath))
-            {
-                var nextDirectoryUp = new DirectoryInfo(dir).Parent;
-                if (nextDirectoryUp == null)
-                {
-                    return string.Empty;
-                }
-                dir = nextDirectoryUp.FullName;
-                dotGitPath = Path.Combine(dir, ".git");
-            }
-            return dir;
-        }
     }
 
 }

@@ -16,7 +16,6 @@ namespace CChangeDirectory
                 if (args.Length == 1 && args[0] == "-i")
                 {
                     var indexManager = new IndexManager();
-                    indexManager.Create();
                 }
                 else
                 {

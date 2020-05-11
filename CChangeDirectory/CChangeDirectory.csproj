@@ -47,6 +47,7 @@
     <Compile Include="DictUtils.cs" />
     <Compile Include="GitWorktreeInfo.cs" />
     <Compile Include="IndexManager.cs" />
+    <Compile Include="PathExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

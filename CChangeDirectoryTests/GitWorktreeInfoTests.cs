@@ -12,7 +12,7 @@ namespace CChangeDirectory.Tests
     public class GitWorktreeInfoTests
     {
         [ClassInitialize]
-        void Init()
+        public static void Init()
         {
             // try to delete the directories 0000, 0001, etc which are used for this test. If we can't delete them, we'll just ignore the error and the end-user
             // will have to cleanup:
@@ -106,7 +106,7 @@ namespace CChangeDirectory.Tests
         /// Get a numbered four digit directory starting with 0001. If 0001 exists, then return 0002 etc.
         /// </summary>
         /// <returns>a string containing the new directory name - just the final name componenent not the complete path.</returns>
-        private string GetNextTestDir()
+        private static string GetNextTestDir()
         {
             var intDirs = Directory.GetDirectories(Directory.GetCurrentDirectory()).Select(path=>new DirectoryInfo(path).Name).Where(x=>x.Length == 4 && x.All(char.IsDigit)).Select(y=>Int32.Parse(y)).OrderByDescending(z=>z);
             var nextDir = intDirs.Any() ? 1 + intDirs.First() : 1;

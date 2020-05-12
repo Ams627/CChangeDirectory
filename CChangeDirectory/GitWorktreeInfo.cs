@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace CChangeDirectory
 {
@@ -11,7 +12,9 @@ namespace CChangeDirectory
         private readonly bool _isGitRepo;
         private readonly bool _isMainDir;
         private readonly string _mainDir;
-        private readonly List<string> _worktreeList = new List<string>();
+        private readonly List<(string dir, string branch)> _worktreeList = new List<(string dir, string branch)>();
+
+        private const string HeadPattern = @"ref:\s+refs/heads/([^\s]+)\s*$";
         public GitWorktreeInfo(string dir)
         {
             _dir = dir;
@@ -90,7 +93,7 @@ namespace CChangeDirectory
         /// <summary>
         /// a list of worktrees - the main worktree is always in Worktrees[0]
         /// </summary>
-        public string[] WorkTrees => _worktreeList.ToArray();
+        public (string dir, string branch)[] WorkTrees => _worktreeList.ToArray();
 
         /// <summary>
         /// Given a starting folder, returns the path to .git in the root of the git repo, or the empty string if we are not in a git repo.
@@ -117,17 +120,18 @@ namespace CChangeDirectory
 
         /// <summary>
         /// Get a list of worktree root directories given a git directory which is either
-        ///     1. A .git directory - in the case of a single worktree (the default git repo state) or in the case of a main worktree
-        ///      (where one or more secondary worktrees have been added and this is the .git directory in the main worktree)
-        ///     2. A .git directory read from a .git file in one of the secondary worktrees created by git worktree add
+        ///     1. the repo main directory (the one CONTAINING the .git folder) - in the case of a single worktree (the default git repo state) 
+        ///     or in the case of a main worktree (where one or more secondary worktrees have been added and this is the main worktree)
+        ///     2. A gitdir - the directory read from a .git FILE in one of the secondary worktrees created by git worktree add
         /// </summary>
-        /// <param name="dir">The worktree directory including .git as the last component or a secondary worktree directory including .git/worktrees/[worktree]</param>
+        /// <param name="dir">The repo main directory (which contains the .git directory) or a secondary worktree directory including .git/worktrees/[worktree]</param>
         /// <param name="isSecondaryWorktree">true if dir is read from the .git file in a worktree created by git worktree add</param>
-        /// <returns>The list of all worktrees</returns>
-        private List<string> GetGitSubDirs(string dir, bool isSecondaryWorktree)
+        /// <returns>A list of tuples. Each tuple is dir: |worktree-dir| branch: |branch|</returns>
+        private List<(string dir, string branchName)> GetGitSubDirs(string dir, bool isSecondaryWorktree)
         {
-            var result = new List<string>();
+            var result = new List<(string dir, string branchname)>();
 
+            // for secondary worktrees the dir is repoDir/.git/worktrees
             var workTreesDir = isSecondaryWorktree ? new DirectoryInfo(dir).Parent.FullName : Path.Combine(dir, "worktrees");
 
             // add main gitdir - it's always the first in the list:
@@ -145,18 +149,39 @@ namespace CChangeDirectory
             {
                 throw new Exception($"{dir} does not specify a valid git directory");
             }
-            result.Add(mainDirInfo.FullName);
+            result.Add((mainDirInfo.FullName, GetGitBranchName(Path.Combine(mainDirInfo.FullName, ".git", "HEAD"))));
 
-            var gitDirFiles = Directory.GetDirectories(workTreesDir).Select(x => Path.Combine(x, "gitdir"));
-            foreach (var file in gitDirFiles)
+            // worktrees dir will only exist after git worktree add:
+            if (Directory.Exists(workTreesDir))
             {
-                var gitDirLine = File.ReadAllLines(file).Where(x => !string.IsNullOrWhiteSpace(x)).Select(y => y.Trim()).First();
-                var gitFile = Path.GetFullPath(gitDirLine);
-                var parentDir = Path.GetDirectoryName(gitFile);
-                result.Add(parentDir);
+                var gitFiles = Directory.GetDirectories(workTreesDir).Select(x => (gitdir: Path.Combine(x, "gitdir"), head: Path.Combine(x, "HEAD")));
+                foreach (var (gitdir, head) in gitFiles)
+                {
+                    var gitDirLine = File.ReadAllLines(gitdir).Where(x => !string.IsNullOrWhiteSpace(x)).Select(y => y.Trim()).First();
+                    var gitFile = Path.GetFullPath(gitDirLine);
+                    var parentDir = Path.GetDirectoryName(gitFile);
+
+                    result.Add((parentDir, GetGitBranchName(head)));
+                }
             }
 
             return result;
+        }
+
+        private string GetGitBranchName(string headFile)
+        {
+            var branch = "";
+            var headMatch = File.ReadAllLines(headFile).Select(x => Regex.Match(x, HeadPattern)).Where(y => y.Success);
+            if (headMatch.Any())
+            {
+                var match = headMatch.First();
+                if (match.Groups.Count > 1)
+                {
+                    branch = match.Groups[1].Value;
+                }
+            }
+
+            return branch;
         }
     }
 }

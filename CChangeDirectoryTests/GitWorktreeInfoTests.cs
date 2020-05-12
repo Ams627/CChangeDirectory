@@ -12,7 +12,7 @@ namespace CChangeDirectory.Tests
     public class GitWorktreeInfoTests
     {
         [ClassInitialize]
-        public static void Init()
+        public static void Init(TestContext testContext)
         {
             // try to delete the directories 0000, 0001, etc which are used for this test. If we can't delete them, we'll just ignore the error and the end-user
             // will have to cleanup:
@@ -59,12 +59,15 @@ namespace CChangeDirectory.Tests
 
             // add new git worktrees:
             int numberOfTrees = 4;
-            var branches = Enumerable.Range(1, numberOfTrees).Select(x => $"branch{x}").ToList();
-            branches.ForEach(x => RunCommand("git", $"worktree add -b new{x} ../{gitProjDir}-{x}").Should().Be(0));
+            var testBranches = Enumerable.Range(1, numberOfTrees).Select(x => $"branch{x}").ToList();
+            testBranches.ForEach(x => RunCommand("git", $"worktree add -b new{x} ../{gitProjDir}-{x}").Should().Be(0));
 
             var upperDirectory = new DirectoryInfo(mainGitDir).Parent.FullName;
             var expectedBranchDirectories = new List<string> { mainGitDir };
-            expectedBranchDirectories.AddRange(branches.Select(x => Path.Combine(upperDirectory, $"{gitProjDir}-{x}")));
+            expectedBranchDirectories.AddRange(testBranches.Select(x => Path.Combine(upperDirectory, $"{gitProjDir}-{x}")));
+
+            var expectedBranches = new List<string> { "master" };
+            expectedBranches.AddRange(testBranches.Select(x => $"new{x}"));
 
             // we're still in the main git directory - create a random folder and change into it:
             var testDir = "Toast/Egg/Jam";
@@ -79,8 +82,11 @@ namespace CChangeDirectory.Tests
             gitWorktreeInfo.IsGitRepo.Should().BeTrue();
             gitWorktreeInfo.IsMainDir.Should().BeTrue();
             var worktreeList = gitWorktreeInfo.WorkTrees;
-            worktreeList.Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
-            worktreeList[0].Should().Be(mainGitDir);
+
+            worktreeList.Select(x => x.dir).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
+            worktreeList[0].dir.Should().Be(mainGitDir);
+            worktreeList.Select(x => x.branch).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranches);
+            worktreeList[0].branch.Should().Be("master");
 
             // change into the parent directory of the main git dir, then change into one of the worktree subdirs:
             Directory.SetCurrentDirectory(upperDirectory);
@@ -97,8 +103,11 @@ namespace CChangeDirectory.Tests
             worktreeInfo2.IsGitRepo.Should().BeTrue();
             worktreeInfo2.IsMainDir.Should().BeFalse();
             var wtreeList = worktreeInfo2.WorkTrees;
-            wtreeList.Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
-            wtreeList[0].Should().Be(mainGitDir);
+
+            worktreeList.Select(x => x.dir).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
+            worktreeList[0].dir.Should().Be(mainGitDir);
+            worktreeList.Select(x => x.branch).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranches);
+            worktreeList[0].branch.Should().Be("master");
         }
 
 

@@ -28,6 +28,29 @@ namespace CChangeDirectory
                     {
                         Console.WriteLine($"{Path.GetDirectoryName(path)}");
                     }
+                    else if (path == "gl")
+                    {
+                        var gitWorktreeInfo = new GitWorktreeInfo(Directory.GetCurrentDirectory());
+                        var worktree = gitWorktreeInfo.WorkTrees;
+
+                        int count = 0;
+                        foreach (var (dir, branch) in worktree)
+                        {
+                            Console.WriteLine($"{count++} {branch} {dir}");
+                        }
+
+                    }
+                    else if (path[0] == 'g' && path.Substring(1).All(char.IsDigit))
+                    {
+                        var index = Int32.Parse(path.Substring(1));
+                        var gitWorktreeInfo = new GitWorktreeInfo(Directory.GetCurrentDirectory());
+                        var worktrees = gitWorktreeInfo.WorkTrees;
+                        if (index > worktrees.Length - 1)
+                        {
+                            throw new Exception($"index out of range - maximum is {worktrees.Length - 1}");
+                        }
+                        Console.WriteLine($"cd {worktrees[index].dir}");
+                    }
                     else
                     {
                         var indexManager = new IndexManager();

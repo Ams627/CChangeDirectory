@@ -11,7 +11,16 @@
 :tick: &#x2714;
 :pound: &#xA3;
 
-What do we want it to do?
+== Changing the current directory in a shells
+
+It is not possible for a sub-process to change directory in a shell such as Bash (nor in `cmd.exe`). Therefore a shell function
+or an alias must be used. Whenever `ccd` intends a change of directory, its output always has the first line starting with `cd` (the
+word `cd` followed by a space). The shell function must check the first line and change directory accordingly.
+
+== Bash vs other shells
+
+If the environment variable `CCDUNIX` is set (to any value), then paths are printed in "Unix format" - i.e.
+`C:\temp\Jim` becomes `/c/temp/Jim`.
 
 == Directory index
 
@@ -39,6 +48,8 @@ Exclusions can be added in the ~/.ccdrc file - this is the settings file for `cc
 directory names match this pattern, they are excluded. Note that the `.git` directory is automatically excluded. The regular expressions are
 not case-sensitive.
 
+A classic exclusion would be the `obj` directory. (`.vs` used by Visual Studio is automatically excluded since it starts with a dot.
+
 == Change directory
 
 The command to do this is
@@ -51,10 +62,69 @@ ccd <directory-name>
 . If the path is a relative path and the path is a file that exists, we print the directory name of the path (without the filename)
 . If the path does not exist, but we traverse upwards to find the `.ccd` folder and load the index file. If the path exists in the index we
 print it.
-. If more than one path exists in the index, we print them all prefixed by a number, then save this
+. If more than one path exists in the index, we print them all prefixed by a number, then save this in the
 list in the `.ccd` folder in the `lastlist` file. We then print all the matches prefixed by a number.
 . If the path is a single or double digit number, we check to see if the last list file is present. We'll change into the entry
 specified by the number.
+
+== Git branch directories
+
+=== Change to the same relative directory position in a different worktree
+
+The command to do this is
+
+----
+ccd g<N>
+----
+
+Where `<N>` is an integer. There are no spaces between the g and the integer.
+
+This facility is for users of `git worktree` - each worktree is assigned an integer according to its position
+in the `.git\worktrees` directory. Zero is always the branch in the `.git` directory (other worktrees added by `git worktree add` 
+use a `.git` file rather than a `.git` directory.
+
+The name of the directory is printed on stdout **preceded by the word cd and a space**.
+
+If the directory doesn't exist in the other worktree, `cd .` is printed.
+
+=== List git branch directories
+
+The command to do this is:
+
+----
+ccd gl
+----
+
+This command lists all worktrees along with the drive mapping (if there is one) and the branch for each worktree.
+
+=== Map drive to git branch directory
+
+The command to do this is 
+
+----
+ccd g<N><drive>
+----
+
+Where `<N>` is an integer and `<D>` is a drive letter. No spaces are allowed - examples are `ccd g0z` (maps the Z: drive to the
+git worktree zero) and `ccd g2a` (maps the A: drive to git directory 2). The mapping is printed.
+
+The mapping is achieved using the https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-definedosdevicew[DefineDosDeviceW]
+Win32 API call.
+
+If a drive is already mapped (with `DefineDosDeviceW` or `subst`), then it will be unmapped before setting the new mapping.
+
+If a drive is already mapped as a network drive, `ccd` will fail (the drive will not be remapped using `DefineDosDeviceW`).
+
+=== Unmap a drive
+
+The command to do this is:
+
+----
+ccd uz
+----
+
+This example unmaps the Z: drive using `DefineDosDeviceW`.
+
 
 
 

@@ -58,7 +58,7 @@ The command to do this is
 ccd <directory-name>
 ----
 
-. If the path is a relative path and the path is a directory that exists, we print the path.
+. If the path iscd a relative path and the path is a directory that exists, we print the path.
 . If the path is a relative path and the path is a file that exists, we print the directory name of the path (without the filename)
 . If the path does not exist, but we traverse upwards to find the `.ccd` folder and load the index file. If the path exists in the index we
 print it.

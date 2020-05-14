@@ -18,8 +18,10 @@ namespace CChangeDirectory
         public GitWorktreeInfo(string dir)
         {
             _dir = dir;
+            
+            var gitRoot = GetGitRoot(dir);
+            var dotGit = Path.Combine(gitRoot, ".git");
 
-            var dotGit = GetGitDir(dir);
             if (File.Exists(dotGit))
             {
                 var gitline = File.ReadAllLines(dotGit).Where(x => !string.IsNullOrWhiteSpace(x)).Select(y => y.Trim()).First();
@@ -91,7 +93,7 @@ namespace CChangeDirectory
         public bool IsMainDir => _isMainDir;
 
         /// <summary>
-        /// a list of worktrees - the main worktree is always in Worktrees[0]
+        /// a list of worktrees - the main worktree is always in Worktrees[0]. For each one we get the root of the worktree and the branch name
         /// </summary>
         public (string dir, string branch)[] WorkTrees => _worktreeList.ToArray();
 
@@ -102,7 +104,7 @@ namespace CChangeDirectory
         /// </summary>
         /// <param name="dir"></param>
         /// <returns></returns>
-        public static string GetGitDir(string dir)
+        public static string GetGitRoot(string dir)
         {
             var dotGitPath = Path.Combine(dir, ".git");
             while (!File.Exists(dotGitPath) && !Directory.Exists(dotGitPath))
@@ -115,7 +117,7 @@ namespace CChangeDirectory
                 dir = nextDirectoryUp.FullName;
                 dotGitPath = Path.Combine(dir, ".git");
             }
-            return dotGitPath;
+            return dir;
         }
 
         /// <summary>

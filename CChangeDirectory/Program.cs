@@ -18,16 +18,16 @@ namespace CChangeDirectory
                     var indexManager = new IndexManager();
                     indexManager.Create();
                 }
-                else
+                else if (args.Any())
                 {
                     var path = args[0];
                     if (Directory.Exists(path))
                     {
-                        Console.WriteLine($"#!cd {path}");
+                        Console.WriteLine($"#!cd {BashOrNot(path)}");
                     }
                     else if (File.Exists(path))
                     {
-                        Console.WriteLine($"#!cd {Path.GetDirectoryName(path)}");
+                        Console.WriteLine($"#!cd {BashOrNot(Path.GetDirectoryName(path))}");
                     }
                     else if (path == "gl")
                     {
@@ -55,7 +55,7 @@ namespace CChangeDirectory
                         var relpath = PathExtensions.GetRelativePath(currentGitRoot, Directory.GetCurrentDirectory());
 
                         var fullOtherPath = Path.Combine(worktrees[index].dir, relpath);
-                        Console.WriteLine($"#!cd {fullOtherPath}");
+                        Console.WriteLine($"#!cd {BashOrNot(fullOtherPath)}");
                     }
                     else if (path[0] == 'g' && int.TryParse(path.Substring(1, path.Length - 2), out var index) && char.IsLetter(path.Last()))
                     {
@@ -71,7 +71,7 @@ namespace CChangeDirectory
                     {
                         SubstMappingsHelper.DeleteMapping(path[1]);
                     }
-                    else
+                    else 
                     {
                         var indexManager = new IndexManager();
                         indexManager.Lookup(path);
@@ -85,6 +85,19 @@ namespace CChangeDirectory
                 Console.Error.WriteLine(progname + ": Error: " + ex.Message);
             }
 
+        }
+
+        private static string BashOrNot(string path)
+        {
+            var bashPrompt = Environment.GetEnvironmentVariable("PS1");
+            if (!string.IsNullOrEmpty(bashPrompt) && bashPrompt.Any(char.IsLetter))
+            {
+                return PathExtensions.GetBashPath(path);
+            }
+            else
+            {
+                return path;
+            }
         }
     }
 }

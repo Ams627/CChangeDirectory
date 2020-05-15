@@ -35,7 +35,7 @@ namespace CChangeDirectory
                 {
                     var name = new DirectoryInfo(subDir).Name;
 
-                    if (name.StartsWith("."))
+                    if (name.StartsWith(".") || name == "obj" || name.StartsWith("Deploy", StringComparison.OrdinalIgnoreCase))
                     {
                         continue;
                     }

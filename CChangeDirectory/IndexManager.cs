@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 namespace CChangeDirectory
 {
@@ -11,18 +12,25 @@ namespace CChangeDirectory
         const string CcdDirectory = ".ccd";
         const string IndexFilename = "index";
         const string LastFilename = "last";
-        public IndexManager()
+
+        ISettings _settings;
+
+        public IndexManager(ISettings settings)
         {
+            this._settings = settings;
         }
 
         public void Create()
         {
-            var gitRootDir = GitWorktreeInfo.GetGitRoot(Directory.GetCurrentDirectory());
+            var gitRootDir = GitWorkTreeManager.GetGitRoot(Directory.GetCurrentDirectory());
             if (string.IsNullOrEmpty(gitRootDir))
             {
                 throw new DirectoryNotFoundException($"Cannot find a directory containing a .git directory or file.");
             }
             var resultingIndex = new SortedDictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
+
+            var includes = _settings.GetList("include");
+            var excludes = _settings.GetList("exclude");
 
             var dirStack = new Stack<string>();
             dirStack.Push(gitRootDir);
@@ -36,6 +44,12 @@ namespace CChangeDirectory
                     var name = new DirectoryInfo(subDir).Name;
 
                     if (name.StartsWith(".") || name == "obj" || name.StartsWith("Deploy", StringComparison.OrdinalIgnoreCase))
+                    {
+                        continue;
+                    }
+
+                    var relativePathOfSubdir = PathExtensions.GetRelativePath(gitRootDir, subDir);
+                    if (!includes.Any(x=>subDir.StartsWith(x)))
                     {
                         continue;
                     }
@@ -78,9 +92,9 @@ namespace CChangeDirectory
             }
         }
 
-        internal void Lookup(string path)
+        internal void Lookup(string path, string pattern = "")
         {
-            var gitRootDir = GitWorktreeInfo.GetGitRoot(Directory.GetCurrentDirectory());
+            var gitRootDir = GitWorkTreeManager.GetGitRoot(Directory.GetCurrentDirectory());
             if (string.IsNullOrEmpty(gitRootDir))
             {
                 throw new DirectoryNotFoundException($"Cannot find a directory containing a .git directory or file.");
@@ -113,18 +127,20 @@ namespace CChangeDirectory
                 var dict = File.ReadAllLines(indexPath).Select(x => x.Split('|')).ToDictionary(y => y[0], y => y.Skip(1).ToList(), StringComparer.OrdinalIgnoreCase);
                 if (dict.TryGetValue(path, out var pathList))
                 {
-                    if (pathList.Count() == 1)
+                    var filteredList = string.IsNullOrEmpty(pattern) ? pathList : pathList.Where(x => Regex.Match(x, pattern, RegexOptions.IgnoreCase).Success).ToList();
+                    if (filteredList.Count() == 1)
                     {
-                        Console.WriteLine($"#!cd {pathList[0]}");
+                        var cdPath = Utils.BashOrNot(Path.Combine(gitRootDir, filteredList[0]));
+                        Console.WriteLine($"#!cd {cdPath}");
                     }
                     else
                     {
                         using (var writer = new StreamWriter(lastPath))
                         {
-                            for (int i = 0; i < pathList.Count(); i++)
+                            for (int i = 0; i < filteredList.Count(); i++)
                             {
-                                Console.WriteLine($"{i} {pathList[i]}");
-                                writer.WriteLine($"{i}|{pathList[i]}");
+                                Console.WriteLine($"{i} {filteredList[i]}");
+                                writer.WriteLine($"{i}|{filteredList[i]}");
                             }
                         }
                     }

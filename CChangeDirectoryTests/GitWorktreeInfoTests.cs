@@ -75,7 +75,7 @@ namespace CChangeDirectory.Tests
             Directory.SetCurrentDirectory(testDir);
 
             var currentDir = Directory.GetCurrentDirectory();
-            var gitWorktreeInfo = new GitWorktreeInfo(currentDir);
+            var gitWorktreeInfo = new GitWorkTreeManager(currentDir);
 
             var mainDir = gitWorktreeInfo.GitDir;
             mainDir.Should().Be(mainGitDir);
@@ -83,10 +83,10 @@ namespace CChangeDirectory.Tests
             gitWorktreeInfo.IsMainDir.Should().BeTrue();
             var worktreeList1 = gitWorktreeInfo.WorkTrees;
 
-            worktreeList1.Select(x => x.dir).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
-            worktreeList1[0].dir.Should().Be(mainGitDir);
-            worktreeList1.Select(x => x.branch).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranches);
-            worktreeList1[0].branch.Should().Be("master");
+            worktreeList1.Select(x => x.Directory).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
+            worktreeList1[0].Directory.Should().Be(mainGitDir);
+            worktreeList1.Select(x => x.BranchName).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranches);
+            worktreeList1[0].BranchName.Should().Be("master");
 
             // change into the parent directory of the main git dir, then change into one of the worktree subdirs:
             Directory.SetCurrentDirectory(upperDirectory);
@@ -97,17 +97,17 @@ namespace CChangeDirectory.Tests
             var dircheck = Directory.GetCurrentDirectory();
             dircheck.Should().EndWith("chicken");
 
-            var worktreeInfo2 = new GitWorktreeInfo(dircheck);
+            var worktreeInfo2 = new GitWorkTreeManager(dircheck);
             var mainDir2 = worktreeInfo2.GitDir;
             mainDir2.Should().Be(mainGitDir);
             worktreeInfo2.IsGitRepo.Should().BeTrue();
             worktreeInfo2.IsMainDir.Should().BeFalse();
             var worktreeList2 = worktreeInfo2.WorkTrees;
 
-            worktreeList2.Select(x => x.dir).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
-            worktreeList2[0].dir.Should().Be(mainGitDir);
-            worktreeList2.Select(x => x.branch).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranches);
-            worktreeList2[0].branch.Should().Be("master");
+            worktreeList2.Select(x => x.Directory).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranchDirectories);
+            worktreeList2[0].Directory.Should().Be(mainGitDir);
+            worktreeList2.Select(x => x.BranchName).Should().HaveCount(numberOfTrees + 1).And.BeEquivalentTo(expectedBranches);
+            worktreeList2[0].BranchName.Should().Be("master");
         }
 
 

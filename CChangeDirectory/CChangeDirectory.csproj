@@ -46,15 +46,19 @@
   <ItemGroup>
     <Compile Include="DictUtils.cs" />
     <Compile Include="GitWorktreeInfo.cs" />
+    <Compile Include="GitWorkTreeManager.cs" />
     <Compile Include="IndexManager.cs" />
     <Compile Include="NativeMethods.cs" />
     <Compile Include="PathExtensions.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Settings.cs" />
     <Compile Include="SubstMappingsHelper.cs" />
+    <Compile Include="Utils.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="Scripts\ccd.bash" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

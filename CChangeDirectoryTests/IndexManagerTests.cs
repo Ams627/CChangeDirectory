@@ -14,6 +14,30 @@ namespace CChangeDirectory.Tests
     public class IndexManagerTests
     {
         [TestMethod()]
+        public void CreateTestWithInclude()
+        {
+            var path = Path.GetTempPath();
+            var dir1 = Path.Combine(path, "Quite-a-long-path");
+            Directory.CreateDirectory(dir1);
+            Directory.SetCurrentDirectory(dir1);
+            var cwd = Directory.GetCurrentDirectory();
+            Assert.IsTrue(Directory.Exists(cwd));
+            Directory.CreateDirectory(".git");
+
+            var testDirs = new[]
+            {
+                "Sally/Sheila/Bob/Harry",
+                "duck/cow.green",
+                "duck/cow.blue",
+                "duck/cow.yellow",
+                "pig/cow/frog"
+            }.ToList();
+            testDirs.ForEach(x => Directory.CreateDirectory(x));
+
+
+        }
+
+        [TestMethod()]
         public void CreateTest()
         {
             var path = Path.GetTempPath();
@@ -57,7 +81,9 @@ namespace CChangeDirectory.Tests
 
             Directory.SetCurrentDirectory(testDirs[0]);
 
-            var indexManager = new IndexManager();
+            var settings = new MockSettings(1);
+
+            var indexManager = new IndexManager(settings);
 //            indexManager.Create();
             var indexDir = Path.Combine(dir1, ".ccd");
             Assert.IsTrue(Directory.Exists(indexDir), "index dir does not exist");
@@ -82,10 +108,10 @@ namespace CChangeDirectory.Tests
             var bob = lookup["bob"].First().Value.ToHashSet();
             var harry = lookup["harry"].First().Value.ToHashSet();
 
-            sally.Should().Contain("Sally/Sheila/Bob/Harry");
-            sheila.Should().Contain("Sally/Sheila/Bob/Harry");
-            bob.Should().Contain("Sally/Sheila/Bob/Harry");
-            harry.Should().Contain("Sally/Sheila/Bob/Harry");
+            sally.Should().Contain("Sally");
+            sheila.Should().Contain(@"Sally\Sheila");
+            bob.Should().Contain(@"Sally\Sheila\Bob");
+            harry.Should().Contain(@"Sally\Sheila\Bob\Harry");
         }
     }
 }

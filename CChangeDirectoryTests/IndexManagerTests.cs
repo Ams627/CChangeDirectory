@@ -7,111 +7,145 @@ using System.Text;
 using System.Threading.Tasks;
 using System.IO;
 using FluentAssertions;
+using System.Diagnostics;
 
 namespace CChangeDirectory.Tests
 {
     [TestClass()]
     public class IndexManagerTests
     {
-        [TestMethod()]
-        public void CreateTestWithInclude()
+        static string TestPath = "";
+
+        [ClassInitialize]
+        public static void Init(TestContext context)
         {
-            var path = Path.GetTempPath();
-            var dir1 = Path.Combine(path, "Quite-a-long-path");
-            Directory.CreateDirectory(dir1);
-            Directory.SetCurrentDirectory(dir1);
-            var cwd = Directory.GetCurrentDirectory();
-            Assert.IsTrue(Directory.Exists(cwd));
-            Directory.CreateDirectory(".git");
+            var fullname = System.Reflection.Assembly.GetExecutingAssembly().Location;
+            var progname = Path.GetFileNameWithoutExtension(fullname);
+            var tempPath = Path.GetTempPath();
+            TestPath = Path.Combine(tempPath, progname);
 
-            var testDirs = new[]
+            Directory.CreateDirectory(TestPath);
+
+            // try to delete the directories 0000, 0001, etc which are used for this test. If we can't delete them, we'll just ignore the error and the end-user
+            // will have to cleanup:
+            var intDirs = Directory.GetDirectories(TestPath).Select(path => new DirectoryInfo(path).Name).Where(x => x.Length == 4 && x.All(char.IsDigit));
+            foreach (var dir in intDirs)
             {
-                "Sally/Sheila/Bob/Harry",
-                "duck/cow.green",
-                "duck/cow.blue",
-                "duck/cow.yellow",
-                "pig/cow/frog"
-            }.ToList();
-            testDirs.ForEach(x => Directory.CreateDirectory(x));
-
-
-        }
-
-        [TestMethod()]
-        public void CreateTest()
-        {
-            var path = Path.GetTempPath();
-            var dir1 = Path.Combine(path, "Fred", "Jim", "Sally");
-            Directory.CreateDirectory(dir1);
-            Directory.SetCurrentDirectory(dir1);
-            var cwd = Directory.GetCurrentDirectory();
-            Assert.IsTrue(Directory.Exists(cwd));
-            Directory.CreateDirectory(".git");
-
-
-            var testDirs = new[]
-            {
-                "Sally/Sheila/Bob/Harry",
-                "duck/cow.green",
-                "duck/cow.blue",
-                "duck/cow.yellow",
-                "pig/cow/frog"
-            }.ToList();
-            testDirs.ForEach(x => Directory.CreateDirectory(x));
-
-
-            // get expected result:
-            var keys = new HashSet<string>();
-            foreach (var dir in testDirs)
-            {
-                var segments = dir.Split('.');
-                foreach (var segment in segments)
+                try
                 {
-                    if (segment.Contains('.'))
-                    {
-                        var subsegments = segment.Split('.');
-                        foreach (var subsegment in subsegments)
-                        {
-                            keys.Add(subsegment);
-                        }
-                        keys.Add(segment);
-                    }
+                    Directory.Delete(dir);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"cannot delete directory {dir}: {ex.GetType()}: {ex.Message}");
                 }
             }
 
-            Directory.SetCurrentDirectory(testDirs[0]);
+            var testDir = GetNextTestDir();
+            var fullTestDirPath = Path.Combine(TestPath, testDir);
+            Directory.CreateDirectory(fullTestDirPath);
+            Directory.SetCurrentDirectory(fullTestDirPath);
+        }
 
-            var settings = new MockSettings(1);
+        /// <summary>
+        /// Test the case where we have an include line in the .ccd/settings file
+        /// </summary>
+        [TestMethod()]
+        public void CreateTestWithInclude()
+        {
+            var dir1 = "Quite-a-long-name";
 
-            var indexManager = new IndexManager(settings);
-//            indexManager.Create();
-            var indexDir = Path.Combine(dir1, ".ccd");
+            Directory.CreateDirectory(dir1);
+            Directory.SetCurrentDirectory(dir1);
+
+            Directory.CreateDirectory(".git");
+
+            var testDirs = new[]
+            {
+                "Sally/Sheila/Bob/Harry",
+                "duck/goose/farm/cow.green",
+                "duck/goose/farm/cow.brown",
+                "duck/cow.blue",
+                "duck/cow.yellow",
+                "pig/cow/frog"
+            }.ToList();
+            testDirs.ForEach(x => Directory.CreateDirectory(x));
+
+            var mockSettings = new MockSettings(2);
+            var indexManager = new IndexManager(mockSettings);
+            indexManager.Create();
+
+            var indexDir = ".ccd";
             Assert.IsTrue(Directory.Exists(indexDir), "index dir does not exist");
             Assert.IsTrue(File.Exists(Path.Combine(indexDir, "index")), "index file does not exists");
 
             var indexFilePath = Path.Combine(indexDir, "index");
             var lookup = File.ReadAllLines(indexFilePath).Select(x => x.Split('|')).Select(y => new { Key = y[0], Value = y.Skip(1).ToList() }).ToLookup(z => z.Key, StringComparer.OrdinalIgnoreCase);
+            (lookup.Where(x => x.Count() != 1)).Should().BeEmpty();
+            lookup["cow"].First().Value.Should().BeEquivalentTo(@"duck\goose\farm\cow.green", @"duck\goose\farm\cow.brown");
+        }
+
+        [TestMethod()]
+        public void CreateTest()
+        {
+            var dir1 = Path.Combine("Fred", "Jim", "Sally");
+            Directory.CreateDirectory(dir1);
+            Directory.SetCurrentDirectory(dir1);
+
+
+            var cwd = Directory.GetCurrentDirectory();
+            Directory.CreateDirectory(".git");
+
+            var testDirs = new[]
+            {
+                "Sally/Sheila/Bob/Harry",
+                "duck/cow.green",
+                "duck/cow.blue",
+                "duck/cow.yellow",
+                "pig/cow/frog"
+            }.ToList();
+            testDirs.ForEach(x => Directory.CreateDirectory(x));
+
+            var settings = new MockSettings(1);
+            var indexManager = new IndexManager(settings);
+            indexManager.Create();
+
+            var indexDir = ".ccd";
+            Assert.IsTrue(Directory.Exists(indexDir), "index dir does not exist");
+            Assert.IsTrue(File.Exists(Path.Combine(indexDir, "index")), "index file does not exists");
+
+            var indexFilePath = Path.Combine(indexDir, "index");
+            var lookup = File.ReadAllLines(indexFilePath).Select(x => x.Split('|')).Select(y => new { Key = y[0], Value = y.Skip(1).ToList() }).ToLookup(z => z.Key, StringComparer.OrdinalIgnoreCase);
+
+            // should be zero cases where there is more than one key:
             Assert.IsFalse(lookup.Where(x => x.Count() != 1).Any());
 
-            var cow = lookup["cow"].First().Value.ToHashSet();
-            var expected1 = new HashSet<string> { @"duck\cow.green", @"duck\cow.blue", @"duck\cow.yellow" };
-            cow.Should().Contain(expected1);
+            var n = lookup["Sheila"];
 
-            var duck = lookup["duck"].First().Value.ToHashSet();
-            duck.Should().Contain(new HashSet<string> { "duck" });
+            lookup["cow"].First().Value.Should().BeEquivalentTo(@"duck\cow.green", @"duck\cow.blue", @"duck\cow.yellow", @"pig\cow");
+            lookup["duck"].First().Value.Should().BeEquivalentTo("duck");
+            lookup["frog"].First().Value.Should().BeEquivalentTo(@"pig\cow\frog");
+            lookup["sally"].First().Value.Should().BeEquivalentTo("Sally");
+            lookup["sheila"].First().Value.Should().BeEquivalentTo(@"Sally\Sheila");
+            lookup["bob"].First().Value.Should().BeEquivalentTo(@"Sally\Sheila\Bob");
+            lookup["harry"].First().Value.Should().BeEquivalentTo(@"Sally\Sheila\Bob\Harry");
+        }
 
-            var frog = lookup["frog"].First().Value.ToHashSet();
-            frog.Should().Contain(new HashSet<string> { @"pig\cow\frog" });
+        /// <summary>
+        /// Get a numbered four digit directory starting with 0001. If 0001 exists, then return 0002 etc.
+        /// </summary>
+        /// <returns>a string containing the new directory name - just the final name componenent not the complete path.</returns>
+        private static string GetNextTestDir()
+        {
+            var intDirs = Directory.GetDirectories(Directory.GetCurrentDirectory()).Select(path => new DirectoryInfo(path).Name).Where(x => x.Length == 4 && x.All(char.IsDigit)).Select(y => Int32.Parse(y)).OrderByDescending(z => z);
+            var nextDir = intDirs.Any() ? 1 + intDirs.First() : 1;
+            return $"{nextDir:D4}";
+        }
 
-            var sally = lookup["sally"].First().Value.ToHashSet();
-            var sheila = lookup["Sheila"].First().Value.ToHashSet();
-            var bob = lookup["bob"].First().Value.ToHashSet();
-            var harry = lookup["harry"].First().Value.ToHashSet();
 
-            sally.Should().Contain("Sally");
-            sheila.Should().Contain(@"Sally\Sheila");
-            bob.Should().Contain(@"Sally\Sheila\Bob");
-            harry.Should().Contain(@"Sally\Sheila\Bob\Harry");
+        [ClassCleanup]
+        public static void Cleanup()
+        {
         }
     }
 }

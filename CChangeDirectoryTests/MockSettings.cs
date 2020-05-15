@@ -19,7 +19,7 @@
             {
                 if (settingName == "include")
                 {
-                    return new[] { @"fred\jim", @"janet\john" };
+                    return new[] { @"duck\goose\farm" };
                 }
             }
             return new string[] { };

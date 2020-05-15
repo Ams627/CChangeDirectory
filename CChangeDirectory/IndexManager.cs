@@ -48,15 +48,17 @@ namespace CChangeDirectory
                         continue;
                     }
 
-                    var relativePathOfSubdir = PathExtensions.GetRelativePath(gitRootDir, subDir);
-                    if (!includes.Any(x=>subDir.StartsWith(x)))
+                    dirStack.Push(subDir);
+
+                    var relativeDir = PathExtensions.GetRelativePath(gitRootDir, subDir);
+                    
+                    // if we have includes, then use them, otherwise include everything:
+                    if (includes.Any() && !includes.Any(x=> relativeDir.StartsWith(x, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue;
                     }
 
-                    dirStack.Push(subDir);
-
-                    var relativeDir = PathExtensions.GetRelativePath(gitRootDir, subDir);
+                    // split names with dots and spaces:
                     if (name.Contains("."))
                     {
                         var segments = name.Split('.');
@@ -106,6 +108,7 @@ namespace CChangeDirectory
 
             if (File.Exists(lastPath) && path.Length < 3 && path.All(char.IsDigit))
             {
+                // here we have an small all digit parameter - less than 3-digits long. This is a reference to the "last" file
                 var lastlines = File.ReadAllLines(lastPath);
                 var separatorArray = new char[] { '|' };
                 foreach (var line in lastlines)
@@ -124,6 +127,8 @@ namespace CChangeDirectory
                     throw new FileNotFoundException($"ccd index file not found - please run ccd -i first.");
                 }
 
+                // lookup the path in the index file and cd to it if its the only one. Otherwise print a numbered list of directories and store the list in the "last" file.
+                // a subsequent ccd command with a number will interogate the last file:
                 var dict = File.ReadAllLines(indexPath).Select(x => x.Split('|')).ToDictionary(y => y[0], y => y.Skip(1).ToList(), StringComparer.OrdinalIgnoreCase);
                 if (dict.TryGetValue(path, out var pathList))
                 {

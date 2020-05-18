@@ -131,6 +131,53 @@ namespace CChangeDirectory.Tests
             lookup["harry"].First().Value.Should().BeEquivalentTo(@"Sally\Sheila\Bob\Harry");
         }
 
+        [TestMethod()]
+        public void CreateTestPartial()
+        {
+            var dir1 = Path.Combine("Fred", "Jim", "Sally");
+            Directory.CreateDirectory(dir1);
+            Directory.SetCurrentDirectory(dir1);
+
+            var cwd = Directory.GetCurrentDirectory();
+            Directory.CreateDirectory(".git");
+
+            var testDirs = new[]
+            {
+                "Sally/Sheila/Bob/Harry",
+                "duck/cow.green",
+                "duck/cow.blue",
+                "duck/cow.yellow",
+                "pig/cow/frog"
+            }.ToList();
+            testDirs.ForEach(x => Directory.CreateDirectory(x));
+
+            var settings = new MockSettings(1);
+            var indexManager = new IndexManager(settings);
+            indexManager.Create();
+
+            var indexDir = ".ccd";
+            Assert.IsTrue(Directory.Exists(indexDir), "index dir does not exist");
+            Assert.IsTrue(File.Exists(Path.Combine(indexDir, "index")), "index file does not exists");
+
+            var indexFilePath = Path.Combine(indexDir, "index");
+            var lookup = File.ReadAllLines(indexFilePath).Select(x => x.Split('|')).Select(y => new { Key = y[0], Value = y.Skip(1).ToList() }).ToLookup(z => z.Key, StringComparer.OrdinalIgnoreCase);
+
+            // should be zero cases where there is more than one key:
+            Assert.IsFalse(lookup.Where(x => x.Count() != 1).Any());
+
+            var n = lookup["Sheila"];
+
+            lookup["cow"].First().Value.Should().BeEquivalentTo(@"duck\cow.green", @"duck\cow.blue", @"duck\cow.yellow", @"pig\cow");
+            lookup["duck"].First().Value.Should().BeEquivalentTo("duck");
+            lookup["frog"].First().Value.Should().BeEquivalentTo(@"pig\cow\frog");
+            lookup["sally"].First().Value.Should().BeEquivalentTo("Sally");
+            lookup["sheila"].First().Value.Should().BeEquivalentTo(@"Sally\Sheila");
+            lookup["bob"].First().Value.Should().BeEquivalentTo(@"Sally\Sheila\Bob");
+            lookup["harry"].First().Value.Should().BeEquivalentTo(@"Sally\Sheila\Bob\Harry");
+        }
+
+
+
         /// <summary>
         /// Get a numbered four digit directory starting with 0001. If 0001 exists, then return 0002 etc.
         /// </summary>

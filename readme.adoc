@@ -58,8 +58,8 @@ The command to do this is
 ccd <directory-name>
 ----
 
-. If the path iscd a relative path and the path is a directory that exists, we print the path.
-. If the path is a relative path and the path is a file that exists, we print the directory name of the path (without the filename)
+. If the path is a relative path and the path is a directory that exists, we print the path.
+. If the path is a relative path and the path is a file that exists, we print the directory part of the path (without the filename)
 . If the path does not exist, but we traverse upwards to find the `.ccd` folder and load the index file. If the path exists in the index we
 print it.
 . If more than one path exists in the index, we print them all prefixed by a number, then save this in the
@@ -126,5 +126,29 @@ ccd uz
 This example unmaps the Z: drive using `DefineDosDeviceW`.
 
 
+== Mintty and Directory history features
+
+`ccd` can continuously scan Windows process list to read the current working directory from bash processes. It stores this
+data in two directory history files `~/.ccd/dirhist/global` and a file for each process `~/.ccd/dirhist/procs/<pid>/dirhist`.
+History scanning is performed by a separate process and does not interfere in any way with the operation of the shell. However,
+directories which become the current directory for a very short period of time can be missed.
+
+=== List directory history
+
+The command to do this is
+
+----
+ccd hl [<regex-filter>]
+----
+
+=== Change to directory from history
+
+The command to do this is
+
+----
+ccd h<number>
+----
+
+number can be up to 3 digits.
 
 
